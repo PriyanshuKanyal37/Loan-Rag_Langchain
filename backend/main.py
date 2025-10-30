@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import os
 
-from backend.ai_pipeline import retrieve_docs, run_credit_chain, generate_targeted_queries, enhanced_retrieve_docs
+from ai_pipeline import retrieve_docs, run_credit_chain, generate_targeted_queries, enhanced_retrieve_docs
 
 # ---------- SETUP ----------
 BASE_DIR = Path(__file__).resolve().parent
