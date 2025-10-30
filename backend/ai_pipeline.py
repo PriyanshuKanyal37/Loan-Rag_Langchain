@@ -18,6 +18,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
+logger = logging.getLogger(__name__)
 
 # ------------------------------
 # Setup paths and environment
@@ -28,9 +29,13 @@ load_dotenv(BASE_DIR / ".env")
 # ------------------------------
 # Model and embeddings
 # ------------------------------
+logger.info("Initializing OpenAI models...")
 chat_model = ChatOpenAI(model="gpt-4o", temperature=0.2)
 query_gen_model = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # Faster model for query generation
+
+logger.info("Loading HuggingFace embeddings model (this may take 30-60s on first run)...")
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+logger.info("✓ Embeddings model loaded successfully")
 
 # ------------------------------
 # Load Qdrant Vector Store
@@ -42,12 +47,14 @@ if not QDRANT_URL:
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
 QDRANT_COLLECTION = os.environ.get("QDRANT_COLLECTION", "loan_policy_chunks")
 
+logger.info(f"Connecting to Qdrant at {QDRANT_URL}...")
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 vectorstore = QdrantVectorStore(
     client=qdrant_client,
     collection_name=QDRANT_COLLECTION,
     embedding=embeddings,
 )
+logger.info(f"✓ Connected to Qdrant collection: {QDRANT_COLLECTION}")
 
 # ------------------------------
 # Prompt Templates (placeholders for future detail)
