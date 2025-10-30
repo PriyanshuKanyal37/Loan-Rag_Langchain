@@ -1468,6 +1468,12 @@ DEFAULT_FORM_QUESTIONS = {
 }
 
 
+@app.get("/")
+def health_check():
+    """Health check endpoint for deployment platforms"""
+    return {"status": "healthy", "service": "Loan Intelligence Assistant API"}
+
+
 @app.get("/form-templates")
 def get_form_templates():
     return {

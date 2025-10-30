@@ -3,7 +3,7 @@ services:
     name: loan-rag-backend
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 60
     envVars:
       - key: OPENAI_API_KEY
         sync: false
