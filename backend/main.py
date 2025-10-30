@@ -1,6 +1,7 @@
 ﻿import bleach
 import logging
 import unicodedata
+import uvicorn
 from pathlib import Path
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -12,6 +13,10 @@ from dotenv import load_dotenv
 import os
 
 from ai_pipeline import retrieve_docs, run_credit_chain, generate_targeted_queries, enhanced_retrieve_docs
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 # ---------- SETUP ----------
 BASE_DIR = Path(__file__).resolve().parent
