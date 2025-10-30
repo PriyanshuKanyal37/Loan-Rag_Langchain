@@ -1,0 +1,104 @@
+
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║          AUSTRALIAN LOAN RAG - LOCAL TESTING                 ║
+║                 Quick Reference Card                          ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📁 PROJECT LOCATION:
+   C:\Users\priya\Desktop\Loan_Final_rag
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 QUICK START (3 Steps):
+
+   1️⃣  Run: SETUP_LOCAL.bat
+       → Installs all dependencies
+
+   2️⃣  Run: START_BACKEND.bat
+       → Starts backend on http://127.0.0.1:8000
+
+   3️⃣  Run: START_FRONTEND.bat (in new terminal)
+       → Starts frontend on http://localhost:5173
+
+   4️⃣  Open: http://localhost:5173
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 MANUAL SETUP:
+
+   Backend:
+   --------
+   cd C:\Users\priya\Desktop\Loan_Final_rag\backend
+   pip install -r requirements.txt
+   uvicorn main:app --reload
+
+   Frontend:
+   ---------
+   cd C:\Users\priya\Desktop\Loan_Final_rag\frontend
+   npm install
+   npm run dev
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 TEST SCENARIO:
+
+   Form Type: Refinance Application
+
+   Property Value:        $720,000
+   Current Loan:          $680,000
+   Annual Income:         $170,000
+   Credit Cards:          $15,000
+   Personal Loans:        $20,000
+   Reason:                Debt Consolidation
+
+   Expected Results:
+   ✅ DTI = 4.24x
+   ✅ Top 3 lenders shown
+   ✅ Complete policy citations
+   ✅ Client-friendly output
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔗 URLS:
+
+   Frontend:          http://localhost:5173
+   Backend API:       http://127.0.0.1:8000
+   API Docs:          http://127.0.0.1:8000/docs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🛠️  TROUBLESHOOTING:
+
+   ❌ Backend won't start?
+      → Check .env file exists in backend folder
+      → Run: pip install -r requirements.txt
+
+   ❌ Frontend won't start?
+      → Check Node.js installed
+      → Run: npm install
+
+   ❌ Can't connect?
+      → Make sure backend is running first
+      → Check frontend .env has correct URL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 DOCUMENTATION:
+
+   LOCAL_TESTING_GUIDE.md      → Detailed testing guide
+   README.md                    → Full documentation
+   QUICKSTART.md                → Deployment guide
+   DEPLOYMENT_CHECKLIST.md      → Pre-deployment checklist
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ READY FOR DEPLOYMENT?
+
+   After local testing works:
+   1. Read QUICKSTART.md
+   2. Push to GitHub
+   3. Deploy to Render
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
