@@ -29,7 +29,9 @@ load_dotenv(BASE_DIR / ".env")
 # Model and embeddings
 # ------------------------------
 logger.info("Initializing OpenAI models...")
-chat_model = ChatOpenAI(model="gpt-4o", temperature=0.2)
+# Using gpt-4o-mini for all chat tasks (95% cheaper than gpt-4o)
+# Cost: $0.15/$0.60 per 1M tokens vs gpt-4o $2.50/$10 per 1M tokens
+chat_model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 query_gen_model = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
 
 # Use OpenAI embeddings instead of HuggingFace (much lighter on RAM!)
