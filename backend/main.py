@@ -1683,7 +1683,7 @@ def ask_structured(payload: LoanQuery):
         logging.exception("run_credit_chain failed: %s", e)
         if _HAS_GEMINI and os.getenv("GEMINI_API_KEY"):
             try:
-                gem_model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro-002")
+                gem_model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
                 gem_model = ChatGoogleGenerativeAI(model=gem_model_name, google_api_key=os.getenv("GEMINI_API_KEY"), temperature=0.2)
                 user_prompt = (
                     f"### Form Type\n{chain_input['form_label']}\n\n"

@@ -6,6 +6,11 @@ from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+try:
+    # Optional Gemini support
+    from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
+except Exception:
+    ChatGoogleGenerativeAI = None  # type: ignore
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 import logging
@@ -1805,13 +1810,29 @@ Generate queries that will retrieve:
 
 Output ONLY the search queries, one per line, no numbering or explanations:"""
 
-    try:
-        response = query_gen_model.invoke(query_prompt)
-        queries = [q.strip() for q in response.content.split('\n') if q.strip() and len(q.strip()) > 10]
-        logging.info(f"Generated {len(queries)} targeted queries")
-    except Exception as exc:
-        logging.error(f"Query generation failed: {exc}")
-        queries = []
+    # Prefer Gemini 2.5 Flash for query generation; fallback to OpenAI
+    queries = []
+    gem_api_key = os.getenv("GEMINI_API_KEY")
+    if gem_api_key and ChatGoogleGenerativeAI is not None:
+        try:
+            gem_model = os.getenv("GEMINI_QUERY_MODEL", "gemini-2.5-flash")
+            gem = ChatGoogleGenerativeAI(model=gem_model, google_api_key=gem_api_key, temperature=0.1)
+            resp = gem.invoke(query_prompt)
+            content = getattr(resp, "content", str(resp)) or ""
+            queries = [q.strip() for q in content.split('\n') if q.strip() and len(q.strip()) > 10]
+            logging.info(f"Generated {len(queries)} targeted queries via Gemini")
+        except Exception as exc:
+            logging.warning("Gemini query generation failed: %s", exc)
+            queries = []
+    if not queries:
+        try:
+            resp = query_gen_model.invoke(query_prompt)
+            content = getattr(resp, "content", str(resp)) or ""
+            queries = [q.strip() for q in content.split('\n') if q.strip() and len(q.strip()) > 10]
+            logging.info(f"Generated {len(queries)} targeted queries via OpenAI")
+        except Exception as exc:
+            logging.error(f"Query generation failed: {exc}")
+            queries = []
 
     # Add essential fallback queries
     base_queries = [
@@ -1942,9 +1963,20 @@ def run_credit_chain(inputs: Dict[str, str], docs: Optional[List] = None) -> Tup
     """
     form_label = inputs.get("form_label", "")
     prompt = get_prompt_for_form(form_label)
-    chain = prompt | chat_model | StrOutputParser()
     logging.info(f"Running credit chain for form type: {form_label}")
-    response = chain.invoke(inputs)
+    response = None
+    # Prefer Gemini 2.5 Flash if configured; fallback to OpenAI chat_model
+    gem_api_key = os.getenv("GEMINI_API_KEY")
+    if gem_api_key and ChatGoogleGenerativeAI is not None:
+        try:
+            gem_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+            gem = ChatGoogleGenerativeAI(model=gem_model, google_api_key=gem_api_key, temperature=0.2)
+            response = (prompt | gem | StrOutputParser()).invoke(inputs)
+        except Exception as exc:
+            logging.warning("Gemini chain failed: %s", exc)
+            response = None
+    if response is None:
+        response = (prompt | chat_model | StrOutputParser()).invoke(inputs)
     html_response = _ensure_html_document(response)
     documents = _serialise_documents(docs)
     return html_response, documents
