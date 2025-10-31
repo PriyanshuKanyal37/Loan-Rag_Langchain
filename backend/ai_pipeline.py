@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
+# Force sentence-transformers to use specific cache directory
+CACHE_DIR = os.getenv("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
+os.environ["SENTENCE_TRANSFORMERS_HOME"] = CACHE_DIR
+os.environ["HF_HOME"] = CACHE_DIR
+
 # ------------------------------
 # Model and embeddings
 # ------------------------------
@@ -33,8 +38,12 @@ logger.info("Initializing OpenAI models...")
 chat_model = ChatOpenAI(model="gpt-4o", temperature=0.2)
 query_gen_model = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # Faster model for query generation
 
-logger.info("Loading HuggingFace embeddings model (this may take 30-60s on first run)...")
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+logger.info(f"Loading HuggingFace embeddings model from cache: {CACHE_DIR}...")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    cache_folder=CACHE_DIR,
+    model_kwargs={"device": "cpu"}
+)
 logger.info("✓ Embeddings model loaded successfully")
 
 # ------------------------------

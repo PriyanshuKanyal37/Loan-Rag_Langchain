@@ -17,6 +17,10 @@ services:
         value: loan_policy_chunks
       - key: ENVIRONMENT
         value: production
+      - key: HF_HOME
+        value: /opt/render/project/.cache/huggingface
+      - key: SENTENCE_TRANSFORMERS_HOME
+        value: /opt/render/project/.cache/huggingface
 
   - type: web
     name: loan-rag-frontend
