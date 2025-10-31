@@ -1557,7 +1557,7 @@ def ask_structured(payload: LoanQuery):
         if queries:
             if ai is None:
                 ai = _ai()
-            docs = ai.enhanced_retrieve_docs(queries, k_per_query=4)
+            docs = ai.enhanced_retrieve_docs(queries, k_per_query=3)  # Reduced from 4 to 3 to save tokens
             docs_text = format_docs(docs)
     except Exception as e:
         logging.exception("Document retrieval failed: %s", e)
