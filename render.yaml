@@ -3,7 +3,7 @@ services:
     name: loan-rag-backend
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+    buildCommand: pip install -r requirements.txt && python download_model.py
     startCommand: python -m uvicorn main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 60
     healthCheckPath: /
     envVars:
