@@ -26,31 +26,31 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
 # ------------------------------
-# Model and embeddings
+# Model and embeddings - OpenAI only
 # ------------------------------
 logger.info("Initializing OpenAI models...")
-# Using gpt-4o-mini for all chat tasks (95% cheaper than gpt-4o)
-# Cost: $0.15/$0.60 per 1M tokens vs gpt-4o $2.50/$10 per 1M tokens
-# Token limits prevent runaway costs
+
+# Chat models - gpt-4o-mini for cost efficiency
+# Cost: $0.15/$0.60 per 1M tokens
 chat_model = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0.2,
-    max_tokens=2000  # Limit response length to control costs
+    max_tokens=2000  # Limit response length
 )
 query_gen_model = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0.1,
-    max_tokens=200  # Queries are short, limit to 200 tokens
+    max_tokens=200  # Queries are short
 )
+logger.info("✓ OpenAI chat models initialized (gpt-4o-mini)")
 
-# Use OpenAI embeddings instead of HuggingFace (much lighter on RAM!)
-# Free tier: 512MB RAM - HuggingFace needs ~800MB, OpenAI needs ~100MB
-logger.info("Initializing OpenAI embeddings (lightweight for Free tier)...")
+# Embeddings - text-embedding-3-small for cost efficiency
+# Cost: $0.02 per 1M tokens, 1536 dimensions
 embeddings = OpenAIEmbeddings(
-    model="text-embedding-3-small",  # 1536 dimensions, cheap and fast
+    model="text-embedding-3-small",
     chunk_size=1000
 )
-logger.info("✓ OpenAI embeddings initialized successfully")
+logger.info("✓ OpenAI embeddings initialized (text-embedding-3-small, 1536 dimensions)")
 
 # ------------------------------
 # Load Qdrant Vector Store
@@ -64,6 +64,10 @@ QDRANT_COLLECTION = os.environ.get("QDRANT_COLLECTION", "loan_policy_chunks")
 
 logger.info(f"Connecting to Qdrant at {QDRANT_URL}...")
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+
+# Connect to existing Qdrant collection
+# Note: Collection must already exist with correct dimensions (1536 for OpenAI embeddings)
+# Use upload_pdfs.py script to create/recreate the collection if needed
 vectorstore = QdrantVectorStore(
     client=qdrant_client,
     collection_name=QDRANT_COLLECTION,
