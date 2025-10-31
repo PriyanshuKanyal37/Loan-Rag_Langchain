@@ -11,7 +11,16 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import os
 
-from ai_pipeline import retrieve_docs, run_credit_chain, generate_targeted_queries, enhanced_retrieve_docs
+import importlib
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    _HAS_GEMINI = True
+except Exception:
+    _HAS_GEMINI = False
+
+def _ai():
+    """Lazy import of heavy ai_pipeline to avoid startup failures."""
+    return importlib.import_module("backend.ai_pipeline")
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -1531,19 +1540,31 @@ def ask_structured(payload: LoanQuery):
         payload.form_type, "Recommend the best lender and structure for the scenario provided."
     )
 
-    # TWO-STAGE RAG: Generate targeted queries using AI
+    # TWO-STAGE RAG: Generate targeted queries using AI (lazy import to avoid startup failures)
     logging.info("Stage 1: Generating targeted queries for enhanced retrieval...")
-    queries = generate_targeted_queries(payload.form_data, payload.form_type.value)
+    try:
+        ai = _ai()
+        queries = ai.generate_targeted_queries(payload.form_data, payload.form_type.value)
+    except Exception as e:
+        logging.exception("Failed to generate targeted queries: %s", e)
+        queries = []
     logging.info("Generated %d targeted queries:", len(queries))
     for idx, query in enumerate(queries, 1):
         logging.info("  Query %d: %s", idx, query)
 
     # TWO-STAGE RAG: Enhanced multi-query retrieval with deduplication
     logging.info("Stage 2: Retrieving documents using multi-query approach...")
-    docs = enhanced_retrieve_docs(queries, k_per_query=4)
-    docs_text = format_docs(docs)
+    docs = []
+    docs_text = ""
+    try:
+        if queries:
+            docs = ai.enhanced_retrieve_docs(queries, k_per_query=4)
+            docs_text = format_docs(docs)
+    except Exception as e:
+        logging.exception("Document retrieval failed: %s", e)
     logging.info("Retrieved %d unique documents after deduplication", len(docs))
-    logging.info("Docs preview:\n%s", docs_text[:1000])
+    if docs_text:
+        logging.info("Docs preview:\n%s", docs_text[:1000])
 
     # Pre-calculate LVR and DTI for the AI
     # Different forms use different field names - check all possibilities
@@ -1655,7 +1676,33 @@ def ask_structured(payload: LoanQuery):
 
     logging.info("Serialized form data for AI:\n%s", chain_input["details_block"])
 
-    answer_html, doc_metadata = run_credit_chain(chain_input, docs)
+    # Run the credit chain (with Gemini fallback if configured)
+    try:
+        answer_html, doc_metadata = ai.run_credit_chain(chain_input, docs)
+    except Exception as e:
+        logging.exception("run_credit_chain failed: %s", e)
+        if _HAS_GEMINI and os.getenv("GEMINI_API_KEY"):
+            try:
+                gem_model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro-002")
+                gem_model = ChatGoogleGenerativeAI(model=gem_model_name, google_api_key=os.getenv("GEMINI_API_KEY"), temperature=0.2)
+                user_prompt = (
+                    f"### Form Type\n{chain_input['form_label']}\n\n"
+                    f"### Planner Question\n{chain_input['question']}\n\n"
+                    f"### Applicants\n{chain_input['applicants_block']}\n\n"
+                    f"### Form Inputs\n{chain_input['details_block']}\n\n"
+                    f"### Additional Notes\n{chain_input['additional_notes']}\n\n"
+                    f"### Retrieved Policy Context\n{chain_input['policy_context']}\n\n"
+                    f"Pre-calculated metrics:\n- LVR: {chain_input['lvr']}\n- DTI: {chain_input['dti']}\n\n"
+                    "Return HTML only. Use semantic tags; no Markdown."
+                )
+                gem_resp = gem_model.invoke(user_prompt)
+                answer_html = gem_resp.content if hasattr(gem_resp, "content") else str(gem_resp)
+                doc_metadata = []
+            except Exception as ge:
+                logging.exception("Gemini fallback failed: %s", ge)
+                raise HTTPException(status_code=503, detail="AI service temporarily unavailable. Please retry.")
+        else:
+            raise HTTPException(status_code=503, detail="AI service temporarily unavailable. Please retry.")
     normalised_html = unicodedata.normalize("NFKC", answer_html)
     normalised_html = normalised_html.replace("", "-").replace("–", "-").replace("—", "-").replace("•", "-")
     safe_html = bleach.clean(
