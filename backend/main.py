@@ -1566,7 +1566,20 @@ def ask_structured(payload: LoanQuery):
         logging.info("Docs preview:\n%s", docs_text[:1000])
 
     # Pre-calculate LVR and DTI for the AI
-    # Different forms use different field names - check all possibilities
+    #
+    # BUG FIX #5: Universal property value resolver
+    # Different forms use different field names - check all possibilities in order of priority
+    property_value = float(
+        payload.form_data.get("estimated_completion_value") or  # Construction (highest priority)
+        payload.form_data.get("purchase_price") or  # Purchase
+        payload.form_data.get("estimated_property_value") or  # Refinance
+        payload.form_data.get("property_value") or  # Generic / SMSF
+        payload.form_data.get("security_property_value") or  # Commercial
+        0
+    )
+
+    # Get base loan amount from different form types
+    form_type_val = payload.form_type.value
     loan_amount = float(
         payload.form_data.get("loan_amount") or  # Purchase, SMSF
         payload.form_data.get("current_loan_balance") or  # Refinance (base amount)
@@ -1575,36 +1588,47 @@ def ask_structured(payload: LoanQuery):
         0
     )
 
-    property_value = float(
-        payload.form_data.get("property_value") or  # Purchase, SMSF
-        payload.form_data.get("purchase_price") or  # Purchase
-        payload.form_data.get("estimated_property_value") or  # Refinance
-        payload.form_data.get("security_property_value") or  # Commercial
-        payload.form_data.get("estimated_completion_value") or  # Construction
-        0
+    # BUG FIX #3: Improved debt consolidation detection
+    # Check multiple indicators, not just text in reason field
+    is_debt_consolidation_included = payload.form_data.get("is_debt_consolidation_included", False)
+    consolidation_debts = payload.form_data.get("consolidation_debts", [])
+    reason = str(payload.form_data.get("reason_for_refinance", "")).lower()
+
+    is_consolidating = (
+        "debt" in reason or
+        "consolidat" in reason or
+        is_debt_consolidation_included is True or
+        (isinstance(consolidation_debts, list) and len(consolidation_debts) > 0)
     )
 
-    # For refinance with debt consolidation, calculate the TOTAL new loan amount
-    form_type_val = payload.form_type.value
+    # BUG FIX #1: Include cash-out amount in loan calculations for cash-out refinance
+    # For refinance/cash-out with debt consolidation, calculate the TOTAL new loan amount
     if form_type_val in ["refinance", "cashout_refinance"]:
-        # Check if consolidating debts
-        reason = str(payload.form_data.get("reason_for_refinance", "")).lower()
-        is_consolidating = "debt" in reason or "consolidat" in reason
+        # Get cash-out amount (BUG FIX #1)
+        cash_out_amount = float(payload.form_data.get("cash_out_amount") or
+                               payload.form_data.get("cash_out_amount_requested") or
+                               payload.form_data.get("additional_funds_required") or 0)
 
-        if is_consolidating:
+        if is_consolidating or cash_out_amount > 0:
             # Total new loan = current balance + debts being consolidated + cash out
             current_balance = float(payload.form_data.get("current_loan_balance") or 0)
-            cc_to_consolidate = float(payload.form_data.get("credit_card_limit_total") or 0)
-            pl_to_consolidate = float(payload.form_data.get("personal_loans_balance") or 0)
-            cash_out = 0.0  # Can add if there's a cash_out_amount field
 
-            loan_amount = current_balance + cc_to_consolidate + pl_to_consolidate + cash_out
-            logging.info("REFINANCE CONSOLIDATION: Calculated total new loan: $%.2f (Current: $%.2f + CC: $%.2f + PL: $%.2f)",
-                        loan_amount, current_balance, cc_to_consolidate, pl_to_consolidate)
+            # Get consolidated debt amounts
+            cc_to_consolidate = float(payload.form_data.get("credit_card_balance_to_consolidate") or
+                                     payload.form_data.get("credit_card_limit_total") or 0)
+            pl_to_consolidate = float(payload.form_data.get("personal_loans_balance") or 0)
+            car_to_consolidate = float(payload.form_data.get("car_loan_balance") or 0)
+            other_to_consolidate = float(payload.form_data.get("other_loan_balance") or 0)
+
+            total_consolidated = cc_to_consolidate + pl_to_consolidate + car_to_consolidate + other_to_consolidate
+
+            loan_amount = current_balance + total_consolidated + cash_out_amount
+            logging.info("REFINANCE/CASHOUT: Calculated total new loan: $%.2f (Current: $%.2f + Consolidated: $%.2f + Cash-Out: $%.2f)",
+                        loan_amount, current_balance, total_consolidated, cash_out_amount)
 
     lvr = calculate_lvr(loan_amount, property_value)
 
-    # Calculate DTI if we have income and debt data
+    # BUG FIX #4: Calculate total income from components if total_income_annual is missing or zero
     # Try different income field names across different forms
     annual_income = float(
         payload.form_data.get("total_income_annual") or
@@ -1616,16 +1640,47 @@ def ask_structured(payload: LoanQuery):
         0
     )
 
+    # BUG FIX #4: If total income is zero or missing, compute from components
+    if annual_income == 0:
+        base_income = float(payload.form_data.get("base_income_annual") or
+                           payload.form_data.get("base_salary") or 0)
+        bonus_income = float(payload.form_data.get("bonus_income_annual") or
+                            payload.form_data.get("bonus") or 0)
+        self_employment_income = float(payload.form_data.get("self_employment_income_annual") or
+                                      payload.form_data.get("self_employment_income") or 0)
+        other_income = float(payload.form_data.get("other_income_annual") or
+                            payload.form_data.get("other_income") or 0)
+        rental_income = float(payload.form_data.get("rental_income_annual") or 0)
+
+        annual_income = base_income + bonus_income + self_employment_income + other_income + rental_income
+
+        if annual_income > 0:
+            logging.info("Computed total income from components: $%.2f (Base: $%.2f, Bonus: $%.2f, Self-Emp: $%.2f, Other: $%.2f, Rental: $%.2f)",
+                        annual_income, base_income, bonus_income, self_employment_income, other_income, rental_income)
+
     # Calculate TOTAL DEBT for DTI calculation (Australian standard)
     # DTI = Total Debt ÷ Annual Income
-    #
-    # CRITICAL: For refinance with consolidation, loan_amount already includes consolidated debts
 
-    # Get all potential debts
-    credit_card_debt = float(
-        payload.form_data.get("credit_card_limit_total") or
-        payload.form_data.get("credit_card_limit") or 0
+    # BUG FIX #2: Use actual credit card balances, not limits
+    # Get credit card balance (not limit) for DTI calculation
+    credit_card_balance = float(
+        payload.form_data.get("credit_card_balance_total") or
+        payload.form_data.get("credit_card_balance") or 0
     )
+
+    # If only limit is available and no balance specified, estimate monthly repayment (3% of limit)
+    # This is more accurate than using the full limit as debt
+    if credit_card_balance == 0:
+        credit_card_limit = float(
+            payload.form_data.get("credit_card_limit_total") or
+            payload.form_data.get("credit_card_limit") or 0
+        )
+        if credit_card_limit > 0:
+            # Estimate monthly repayment: 3% of limit, annualized for DTI
+            credit_card_balance = credit_card_limit * 0.03 * 12
+            logging.info("Credit card: Using estimated annual repayment $%.2f (3%% of $%.2f limit * 12)",
+                        credit_card_balance, credit_card_limit)
+
     personal_loan_debt = float(payload.form_data.get("personal_loans_balance") or 0)
     car_loan_debt = float(payload.form_data.get("car_loan_balance") or 0)
     other_loan_debt = float(payload.form_data.get("other_loan_balance") or 0)
@@ -1634,26 +1689,18 @@ def ask_structured(payload: LoanQuery):
     # Check if this is a refinance with debt consolidation
     is_refinance = form_type_val in ["refinance", "cashout_refinance"]
 
-    if is_refinance:
-        reason = str(payload.form_data.get("reason_for_refinance", "")).lower()
-        is_consolidating = "debt" in reason or "consolidat" in reason
-
-        if is_consolidating:
-            # loan_amount already calculated above to include consolidated debts
-            # Only add debts NOT being consolidated (like HECS)
-            total_debt = loan_amount + help_debt
-            logging.info("REFINANCE WITH CONSOLIDATION: Total debt = $%.2f (loan includes CC + PL)",
-                        total_debt)
-        else:
-            # Not consolidating, add all existing debts
-            total_debt = loan_amount + credit_card_debt + personal_loan_debt + car_loan_debt + other_loan_debt + help_debt
-            logging.info("REFINANCE WITHOUT CONSOLIDATION: Total debt = $%.2f",
-                        total_debt)
+    if is_refinance and is_consolidating:
+        # loan_amount already calculated above to include consolidated debts
+        # Only add debts NOT being consolidated (like HECS)
+        total_debt = loan_amount + help_debt
+        logging.info("REFINANCE WITH CONSOLIDATION: Total debt = $%.2f (loan includes consolidated debts)",
+                    total_debt)
     else:
-        # FOR PURCHASE/CONSTRUCTION/COMMERCIAL/SMSF: Add new loan + all existing debts
-        total_debt = loan_amount + credit_card_debt + personal_loan_debt + car_loan_debt + other_loan_debt + help_debt
-        logging.info("NON-REFINANCE (%s): Total debt = $%.2f",
-                    form_type_val, total_debt)
+        # Not consolidating, or not a refinance - add all existing debts
+        total_debt = loan_amount + credit_card_balance + personal_loan_debt + car_loan_debt + other_loan_debt + help_debt
+        logging.info("%s: Total debt = $%.2f",
+                    "REFINANCE WITHOUT CONSOLIDATION" if is_refinance else f"NON-REFINANCE ({form_type_val})",
+                    total_debt)
 
     dti = calculate_dti(total_debt, annual_income) if annual_income > 0 else 0.0
 
