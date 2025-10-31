@@ -5,8 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 import logging
@@ -26,25 +25,21 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
-# Force sentence-transformers to use specific cache directory
-CACHE_DIR = os.getenv("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
-os.environ["SENTENCE_TRANSFORMERS_HOME"] = CACHE_DIR
-os.environ["HF_HOME"] = CACHE_DIR
-
 # ------------------------------
 # Model and embeddings
 # ------------------------------
 logger.info("Initializing OpenAI models...")
 chat_model = ChatOpenAI(model="gpt-4o", temperature=0.2)
-query_gen_model = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # Faster model for query generation
+query_gen_model = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
 
-logger.info(f"Loading HuggingFace embeddings model from cache: {CACHE_DIR}...")
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
-    cache_folder=CACHE_DIR,
-    model_kwargs={"device": "cpu"}
+# Use OpenAI embeddings instead of HuggingFace (much lighter on RAM!)
+# Free tier: 512MB RAM - HuggingFace needs ~800MB, OpenAI needs ~100MB
+logger.info("Initializing OpenAI embeddings (lightweight for Free tier)...")
+embeddings = OpenAIEmbeddings(
+    model="text-embedding-3-small",  # 1536 dimensions, cheap and fast
+    chunk_size=1000
 )
-logger.info("✓ Embeddings model loaded successfully")
+logger.info("✓ OpenAI embeddings initialized successfully")
 
 # ------------------------------
 # Load Qdrant Vector Store

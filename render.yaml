@@ -3,7 +3,7 @@ services:
     name: loan-rag-backend
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python download_model.py
+    buildCommand: pip install -r requirements.txt
     startCommand: python -m uvicorn main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 60
     healthCheckPath: /
     envVars:
@@ -17,10 +17,6 @@ services:
         value: loan_policy_chunks
       - key: ENVIRONMENT
         value: production
-      - key: HF_HOME
-        value: /opt/render/project/.cache/huggingface
-      - key: SENTENCE_TRANSFORMERS_HOME
-        value: /opt/render/project/.cache/huggingface
 
   - type: web
     name: loan-rag-frontend
