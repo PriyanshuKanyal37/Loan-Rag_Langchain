@@ -20,7 +20,8 @@ except Exception:
 
 def _ai():
     """Lazy import of heavy ai_pipeline to avoid startup failures."""
-    return importlib.import_module("backend.ai_pipeline")
+    # Import as a module in current working dir (backend)
+    return importlib.import_module("ai_pipeline")
 
 # Configure logging
 logger = logging.getLogger(__name__)
