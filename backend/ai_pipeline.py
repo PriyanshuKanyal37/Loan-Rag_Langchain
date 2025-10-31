@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -664,6 +665,15 @@ SMSF_PURCHASE_PROMPT = ChatPromptTemplate.from_messages(
             "system",
             """
 You are an Australian SMSF lending specialist preparing client-ready credit proposals for SMSF property purchases.
+
+🚨 CRITICAL OUTPUT FORMAT REQUIREMENTS 🚨
+- OUTPUT FORMAT: HTML ONLY - NO MARKDOWN, NO PLAIN TEXT, NO CODE BLOCKS
+- You MUST write ONLY valid HTML using tags like <h1>, <h2>, <h3>, <table>, <tr>, <th>, <td>, <p>, <ul>, <li>, <strong>, <em>
+- Do NOT use Markdown syntax like ##, ###, **, *, -, or code blocks ```
+- Do NOT write plain text paragraphs without HTML tags
+- EVERY line of your output must be wrapped in proper HTML tags
+- Start directly with <h1> tag, no preamble or introduction text
+
 🎯 Your task:
 - Produce a single, valid HTML fragment only (no <html> or <body> tags).
 - Use semantic tags: <h1>, <h2>, <h3>, <table>, <tr>, <th>, <td>, <p>, <ul>, <li>, <strong>, <em>.
@@ -734,6 +744,14 @@ EXAMPLE ELIMINATION REASONING:
 "Brighten Financial: ❌ INELIGIBLE - Does not offer SMSF lending products (Source: Brighten Product Guide, Page 1)"
 "Westpac: ❌ INELIGIBLE - SMSF LVR of 78% exceeds their maximum SMSF LVR of 70%"
 "La Trobe Financial: ✅ ELIGIBLE - Offers SMSF loans, LVR 70% within max, meets minimum fund size of $200k"
+
+🚨🚨🚨 ABSOLUTE REQUIREMENT - READ THIS CAREFULLY 🚨🚨🚨
+Your entire response MUST be in HTML format ONLY.
+- DO NOT write any Markdown (no ##, ###, **, *, -)
+- DO NOT write plain text sentences outside HTML tags
+- EVERY paragraph, heading, list, and table MUST use HTML tags
+- Your response must START with <h1> and contain ONLY HTML tags throughout
+- Think of yourself as writing HTML code, not a document
 
 💡 Required HTML Output Structure (must follow this order):
 
@@ -855,12 +873,21 @@ EXAMPLE ELIMINATION REASONING:
   <tr><td>Risks identified</td><td>✅ LRBA, liquidity, and compliance risks flagged</td></tr>
 </table>
 
+🚨🚨🚨 FINAL CRITICAL REMINDER BEFORE YOU START WRITING 🚨🚨🚨
+- Your ENTIRE output must be HTML tags ONLY
+- NO Markdown syntax (##, ###, **, *, -)
+- NO plain text without HTML tags
+- Start with <h1> tag immediately
+- End with </table> or </p> tag
+- Every single line must be valid HTML
 ⚠️ Output must be valid HTML only — no extra commentary, Markdown, or plain text. Flag any missing evidence as "Not provided" (e.g., "Not provided [Doc X]").
             """,
         ),
         (
             "user",
             """
+🚨 REMEMBER: Your response must be 100% HTML format. Do NOT use Markdown. Start with <h1> tag immediately.
+
 Generate a full HTML-formatted Credit Proposal for an SMSF Loan Purchase using the following details:
 
 ### Form Type
@@ -1753,13 +1780,19 @@ def get_prompt_for_form(form_label: str) -> ChatPromptTemplate:
         .replace("-", "")
         .replace("_", " ")
     )
+    # Collapse multiple spaces into single space
+    normalized_label = re.sub(r'\s+', ' ', normalized_label)
+
+    logging.info("Form label routing: '%s' -> normalized: '%s'", form_label, normalized_label)
 
     prompt = PROMPT_ROUTER.get(normalized_label, DEFAULT_PROMPT)
 
     if prompt == DEFAULT_PROMPT:
-        logging.info("Form label '%s' not recognized; using DEFAULT_PROMPT.", form_label)
+        logging.warning("Form label '%s' (normalized: '%s') not found in PROMPT_ROUTER. Available keys: %s",
+                       form_label, normalized_label, list(PROMPT_ROUTER.keys()))
+        logging.info("Using DEFAULT_PROMPT as fallback.")
     else:
-        logging.info("Selected prompt for form: %s", form_label)
+        logging.info("✓ Selected SMSF_PURCHASE_PROMPT for form: %s", form_label)
 
     return prompt
 
