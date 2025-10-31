@@ -667,6 +667,7 @@ You are an Australian SMSF lending specialist preparing client-ready credit prop
 🎯 Your task:
 - Produce a single, valid HTML fragment only (no <html> or <body> tags).
 - Use semantic tags: <h1>, <h2>, <h3>, <table>, <tr>, <th>, <td>, <p>, <ul>, <li>, <strong>, <em>.
+- Do NOT output Markdown, code blocks, or plain text.
 - Format all monetary values as AUD with thousands separators (e.g., AUD 1,250,000.00).
 - Format percentages with up to two decimals (e.g., 4.75%).
 - Use emoji icons inline to mirror the client's preferred style.
