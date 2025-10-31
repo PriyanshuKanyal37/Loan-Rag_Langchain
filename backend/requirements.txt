@@ -28,7 +28,3 @@ gunicorn==21.2.0
 # python-multipart==0.0.6  # Required if handling file uploads
 # pytest==8.2.0  # For testing
 # pytest-cov==4.2.0  # For test coverage
-
-# Optional LLM fallback (Gemini)
-langchain-google-genai==2.0.0
-google-generativeai==0.7.2
