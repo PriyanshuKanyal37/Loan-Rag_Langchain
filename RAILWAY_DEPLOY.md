@@ -1,15 +1,46 @@
 # Railway Deployment Guide
 
-## Error Fixed! ✅
+## Errors Fixed! ✅
 
-The error you encountered was:
+### Backend Error:
 ```
 NameError: name 'sentence' is not defined
 ```
-
-**Cause:** Railway stripped quotes from the model download command in the build phase.
-
 **Solution:** Created `backend/download_model.py` script instead of inline Python command.
+
+### Frontend Error:
+```
+sh: 1: npm: not found
+```
+**Solution:** Railway needs separate services for backend and frontend (can't mix Python + Node.js in one service).
+
+---
+
+## Important: Railway Architecture
+
+**Railway requires SEPARATE services for backend and frontend!**
+
+### Why?
+
+Railway detects project type based on root files:
+- Finds `requirements.txt` → Treats as Python project
+- Finds `package.json` → Treats as Node.js project
+
+**You cannot mix Python + Node.js in one Railway service!**
+
+### Solution: Deploy as Two Services
+
+1. **Backend Service**:
+   - Uses `backend/railway.json`
+   - Only installs Python dependencies
+   - No heavy frontend dependencies
+
+2. **Frontend Service**:
+   - Uses `frontend/railway.json`
+   - Only installs Node.js dependencies (small, ~50MB)
+   - No heavy ML dependencies (500MB)
+
+This is MUCH more efficient than trying to install both in one service!
 
 ---
 
@@ -21,11 +52,11 @@ NameError: name 'sentence' is not defined
 
 ---
 
-## Deploy to Railway
+## Deploy to Railway (Two Separate Services)
 
-### Method 1: Railway Dashboard (Recommended)
+### Service 1: Deploy Backend
 
-#### Step 1: Create New Project
+#### Step 1: Create Backend Service
 1. Go to https://railway.app/new
 2. Click "Deploy from GitHub repo"
 3. Select your repository: `Loan-Rag_Langchain`
@@ -34,22 +65,11 @@ NameError: name 'sentence' is not defined
 #### Step 2: Configure Root Directory
 1. Click on your service
 2. Go to "Settings" tab
-3. Set **Root Directory**: `backend`
-4. Click "Save"
+3. **IMPORTANT**: Set **Root Directory**: `backend`
+4. Railway will now use `backend/railway.json` config
+5. Click "Save"
 
-#### Step 3: Configure Build Command
-In Settings → Build:
-```bash
-pip install -r requirements.txt && python download_model.py
-```
-
-#### Step 4: Configure Start Command
-In Settings → Deploy:
-```bash
-python -m uvicorn main:app --host 0.0.0.0 --port $PORT
-```
-
-#### Step 5: Add Environment Variables
+#### Step 3: Add Environment Variables
 Go to "Variables" tab and add:
 
 ```env
@@ -60,8 +80,60 @@ QDRANT_COLLECTION=loan_policy_chunks
 ENVIRONMENT=production
 ```
 
-#### Step 6: Deploy
-Railway will automatically deploy. Wait 3-5 minutes for build.
+#### Step 4: Deploy Backend
+Railway will automatically:
+- Install Python dependencies from `backend/requirements.txt`
+- Run `python download_model.py` to cache embeddings
+- Start uvicorn server
+- Takes ~5 minutes (model download is slow)
+
+**Note your backend URL**: `https://your-backend.railway.app`
+
+---
+
+### Service 2: Deploy Frontend
+
+#### Step 1: Add New Service
+1. In the same Railway project, click "+ New"
+2. Select "GitHub Repo"
+3. Choose the SAME repository: `Loan-Rag_Langchain`
+
+#### Step 2: Configure Root Directory
+1. Click on the new service
+2. Go to "Settings" tab
+3. **IMPORTANT**: Set **Root Directory**: `frontend`
+4. Railway will now use `frontend/railway.json` config
+5. Click "Save"
+
+#### Step 3: Add Environment Variable
+Go to "Variables" tab and add:
+
+```env
+VITE_API_BASE_URL=https://your-backend.railway.app
+```
+
+**Replace with your actual backend URL from Service 1!**
+
+#### Step 4: Deploy Frontend
+Railway will automatically:
+- Install Node.js dependencies from `frontend/package.json` (~50MB)
+- Run `npm run build`
+- Start Vite preview server
+- Takes ~2 minutes
+
+---
+
+### Step 5: Update Backend CORS
+
+After both services are deployed, update backend CORS to allow frontend:
+
+1. Go to backend service settings
+2. Add environment variable:
+```env
+FRONTEND_URL=https://your-frontend.railway.app
+```
+
+3. Redeploy backend
 
 ---
 
