@@ -12,11 +12,6 @@ from dotenv import load_dotenv
 import os
 
 import importlib
-try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    _HAS_GEMINI = True
-except Exception:
-    _HAS_GEMINI = False
 
 def _ai():
     """Lazy import of heavy ai_pipeline to avoid startup failures."""
@@ -1680,35 +1675,14 @@ def ask_structured(payload: LoanQuery):
 
     logging.info("Serialized form data for AI:\n%s", chain_input["details_block"])
 
-    # Run the credit chain (with Gemini fallback if configured)
+    # Run the credit chain
     try:
         if ai is None:
             ai = _ai()
         answer_html, doc_metadata = ai.run_credit_chain(chain_input, docs)
     except Exception as e:
         logging.exception("run_credit_chain failed: %s", e)
-        if _HAS_GEMINI and os.getenv("GEMINI_API_KEY"):
-            try:
-                gem_model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-                gem_model = ChatGoogleGenerativeAI(model=gem_model_name, google_api_key=os.getenv("GEMINI_API_KEY"), temperature=0.2)
-                user_prompt = (
-                    f"### Form Type\n{chain_input['form_label']}\n\n"
-                    f"### Planner Question\n{chain_input['question']}\n\n"
-                    f"### Applicants\n{chain_input['applicants_block']}\n\n"
-                    f"### Form Inputs\n{chain_input['details_block']}\n\n"
-                    f"### Additional Notes\n{chain_input['additional_notes']}\n\n"
-                    f"### Retrieved Policy Context\n{chain_input['policy_context']}\n\n"
-                    f"Pre-calculated metrics:\n- LVR: {chain_input['lvr']}\n- DTI: {chain_input['dti']}\n\n"
-                    "Return HTML only. Use semantic tags; no Markdown."
-                )
-                gem_resp = gem_model.invoke(user_prompt)
-                answer_html = gem_resp.content if hasattr(gem_resp, "content") else str(gem_resp)
-                doc_metadata = []
-            except Exception as ge:
-                logging.exception("Gemini fallback failed: %s", ge)
-                raise HTTPException(status_code=503, detail="AI service temporarily unavailable. Please retry.")
-        else:
-            raise HTTPException(status_code=503, detail="AI service temporarily unavailable. Please retry.")
+        raise HTTPException(status_code=503, detail="AI service temporarily unavailable. Please retry.")
     normalised_html = unicodedata.normalize("NFKC", answer_html)
     normalised_html = normalised_html.replace("", "-").replace("–", "-").replace("—", "-").replace("•", "-")
     safe_html = bleach.clean(
