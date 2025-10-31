@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import os
 
-from ai_pipeline import retrieve_docs, run_credit_chain, generate_targeted_queries, enhanced_retrieve_docs
+from backend.ai_pipeline import retrieve_docs, run_credit_chain, generate_targeted_queries, enhanced_retrieve_docs
 
 # Configure logging
 logger = logging.getLogger(__name__)
