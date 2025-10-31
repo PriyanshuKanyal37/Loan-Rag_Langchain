@@ -1543,6 +1543,7 @@ def ask_structured(payload: LoanQuery):
 
     # TWO-STAGE RAG: Generate targeted queries using AI (lazy import to avoid startup failures)
     logging.info("Stage 1: Generating targeted queries for enhanced retrieval...")
+    ai = None
     try:
         ai = _ai()
         queries = ai.generate_targeted_queries(payload.form_data, payload.form_type.value)
@@ -1559,6 +1560,8 @@ def ask_structured(payload: LoanQuery):
     docs_text = ""
     try:
         if queries:
+            if ai is None:
+                ai = _ai()
             docs = ai.enhanced_retrieve_docs(queries, k_per_query=4)
             docs_text = format_docs(docs)
     except Exception as e:
@@ -1679,6 +1682,8 @@ def ask_structured(payload: LoanQuery):
 
     # Run the credit chain (with Gemini fallback if configured)
     try:
+        if ai is None:
+            ai = _ai()
         answer_html, doc_metadata = ai.run_credit_chain(chain_input, docs)
     except Exception as e:
         logging.exception("run_credit_chain failed: %s", e)
