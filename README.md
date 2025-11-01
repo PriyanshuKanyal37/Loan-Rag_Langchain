@@ -228,7 +228,7 @@ docker run -p 8000:8000 --env-file .env loan-rag-api
 OPENAI_API_KEY=your_openai_key
 VECTOR_DB_URL=your_vector_db_url
 VECTOR_DB_API_KEY=your_db_api_key
-MODEL_NAME=gpt-3.5-turbo
+MODEL_NAME=any model
 TEMPERATURE=0.7
 MAX_TOKENS=500
 ```
