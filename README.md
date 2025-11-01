@@ -25,6 +25,7 @@
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
 - [👤 Author](#-author)
+- [🤖 Contributors](#-contributors)
 
 ---
 
@@ -41,3 +42,19 @@ This project implements a **Retrieval Augmented Generation (RAG)** system specif
 ✅ **Intelligent Query Processing** - Natural language understanding for loan-related questions
 ✅ **Document Retrieval** - Efficiently searches through loan documents and policies
 ✅ **Context-Aware Responses** - Provides accurate answers based on retrieved information
+
+---
+
+## 👤 Author
+
+**Priyanshu Kanyal**
+- GitHub: [@PriyanshuKanyal37](https://github.com/PriyanshuKanyal37)
+- Project: [Loan-Rag_Langchain](https://github.com/PriyanshuKanyal37/Loan-Rag_Langchain)
+
+---
+
+## 🤖 Contributors
+
+- **Priya Kanyal** — Developer & Architect
+- **Comet Assistant (Claude/Anthropic AI)** — Documentation author, prompt engineering, automation workflow advisor
+- **Supported by:** OpenAI, Qdrant, LangChain, Render
