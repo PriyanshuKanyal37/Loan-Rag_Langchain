@@ -399,14 +399,6 @@ We welcome contributions! Here's how you can help:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-## 📞 Contact & Support
-
-- **Issues**: [GitHub Issues](https://github.com/PriyanshuKanyal37/Loan-Rag_Langchain/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/PriyanshuKanyal37/Loan-Rag_Langchain/discussions)
-
----
 
 <div align="center">
 
