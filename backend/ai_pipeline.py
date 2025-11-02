@@ -66,6 +66,18 @@ QDRANT_COLLECTION = os.environ.get("QDRANT_COLLECTION", "loan_policy_chunks")
 logger.info(f"Connecting to Qdrant at {QDRANT_URL}...")
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
+# 🧩 Ensure the 'domain' field is indexed as a keyword to allow filtering
+from qdrant_client.models import PayloadSchemaType
+try:
+    qdrant_client.create_payload_index(
+        collection_name=QDRANT_COLLECTION,
+        field_name="domain",
+        field_schema=PayloadSchemaType.KEYWORD,
+    )
+    logger.info("✅ Created keyword index for 'domain' (or already exists)")
+except Exception as e:
+    logger.warning(f"⚠️ Skipping index creation for 'domain': {e}")
+
 # Connect to existing Qdrant collection
 # Note: Collection must already exist with correct dimensions (1536 for OpenAI embeddings)
 # Use upload_pdfs.py script to create/recreate the collection if needed
@@ -75,6 +87,7 @@ vectorstore = QdrantVectorStore(
     embedding=embeddings,
 )
 logger.info(f"✓ Connected to Qdrant collection: {QDRANT_COLLECTION}")
+
 
 # ------------------------------
 # Prompt Templates (placeholders for future detail)
