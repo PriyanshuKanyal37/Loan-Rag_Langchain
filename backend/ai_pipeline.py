@@ -132,13 +132,16 @@ for residential purchase applications.
 
 ⚠️ CRITICAL: MANDATORY VALIDATION STEPS (MUST FOLLOW STRICTLY):
 
-STEP 1: CALCULATE KEY METRICS
-- LVR (Loan-to-Value Ratio) = (Loan Amount ÷ Purchase Price) × 100
-- DTI (Debt-to-Income Ratio) = Total Debt ÷ Annual Income (expressed as multiple, e.g., 2.74x)
-- Pre-calculated values provided: {lvr}, {dti}
+STEP 1: USE THE PRE-CALCULATED METRICS PROVIDED (DO NOT RECALCULATE)
+🚨 CRITICAL: You MUST use these exact values in Section 3 "Lender Policy Analysis & Eligibility Assessment":
+- LVR (Loan-to-Value Ratio): {lvr} ← USE THIS EXACT VALUE, DO NOT CALCULATE
+- DTI (Debt-to-Income Ratio): {dti} ← USE THIS EXACT VALUE, DO NOT CALCULATE
 - Loan Amount: {loan_amount}
 - Property Value: {property_value}
-- Note: {dti} is already calculated. Typical Australian lender limits are 6x-8x.
+
+⚠️ DO NOT write "Based on LVR: 0.00%" or any other value besides {lvr}
+⚠️ In Section 3, you MUST use exactly: "LVR: {lvr}, DTI: {dti}"
+⚠️ Typical Australian lender limits are 6x-8x DTI.
 
 STEP 2: EXTRACT LENDER POLICIES FROM RETRIEVED CONTEXT
 For EACH lender mentioned in the retrieved policy context, you MUST extract and verify:
@@ -421,13 +424,16 @@ for residential lending.
 
 ⚠️ CRITICAL: MANDATORY VALIDATION STEPS (MUST FOLLOW STRICTLY):
 
-STEP 1: CALCULATE KEY METRICS
-- LVR (Loan-to-Value Ratio) = (Loan Amount ÷ Property Value) × 100
-- DTI (Debt-to-Income Ratio) = Total Debt ÷ Annual Income (expressed as multiple, e.g., 2.74x)
-- Pre-calculated values provided: {lvr}, {dti}
+STEP 1: USE THE PRE-CALCULATED METRICS PROVIDED (DO NOT RECALCULATE)
+🚨 CRITICAL: You MUST use these exact values in Section 3 "Lender Policy Analysis & Eligibility Assessment":
+- LVR (Loan-to-Value Ratio): {lvr} ← USE THIS EXACT VALUE, DO NOT CALCULATE
+- DTI (Debt-to-Income Ratio): {dti} ← USE THIS EXACT VALUE, DO NOT CALCULATE
 - Loan Amount: {loan_amount}
 - Property Value: {property_value}
-- Note: {dti} is already calculated. Typical Australian lender limits are 6x-8x.
+
+⚠️ DO NOT write "Based on LVR: 0.00%" or any other value besides {lvr}
+⚠️ In Section 3, you MUST use exactly: "LVR: {lvr}, DTI: {dti}"
+⚠️ Typical Australian lender limits are 6x-8x DTI.
 
 STEP 2: EXTRACT LENDER POLICIES FROM RETRIEVED CONTEXT
 For EACH lender mentioned in the retrieved policy context, you MUST extract and verify:
@@ -689,13 +695,16 @@ You are an Australian SMSF lending specialist preparing client-ready credit prop
 
 ⚠️ CRITICAL: MANDATORY VALIDATION STEPS FOR SMSF LENDING (MUST FOLLOW STRICTLY):
 
-STEP 1: CALCULATE KEY METRICS
-- LVR (Loan-to-Value Ratio) = (Loan Amount ÷ Property Value) × 100
-- DTI (Debt-to-Income Ratio) = Total Debt ÷ Annual Income (expressed as multiple, e.g., 2.74x)
-- Pre-calculated values provided: {lvr}, {dti}
+STEP 1: USE THE PRE-CALCULATED METRICS PROVIDED (DO NOT RECALCULATE)
+🚨 CRITICAL: You MUST use these exact values in Section 3 "Lender Policy Analysis & Eligibility Assessment":
+- LVR (Loan-to-Value Ratio): {lvr} ← USE THIS EXACT VALUE, DO NOT CALCULATE
+- DTI (Debt-to-Income Ratio): {dti} ← USE THIS EXACT VALUE, DO NOT CALCULATE
 - Loan Amount: {loan_amount}
 - Property Value: {property_value}
-- Note: {dti} is already calculated. SMSF lenders typically have stricter DTI limits.
+
+⚠️ DO NOT write "Based on LVR: 0.00%" or any other value besides {lvr}
+⚠️ In Section 3, you MUST use exactly: "LVR: {lvr}, DTI: {dti}"
+⚠️ SMSF lenders typically have stricter DTI limits and focus on SMSF fund strength.
 
 STEP 2: EXTRACT SMSF-SPECIFIC LENDER POLICIES FROM RETRIEVED CONTEXT
 For EACH lender mentioned in the retrieved policy context, you MUST extract and verify:
@@ -960,13 +969,16 @@ You are an Australian construction-lending specialist preparing professional cre
 
 ⚠️ CRITICAL: MANDATORY VALIDATION STEPS FOR CONSTRUCTION LENDING (MUST FOLLOW STRICTLY):
 
-STEP 1: CALCULATE KEY METRICS
-- LVR (Loan-to-Value Ratio) = (Loan Amount ÷ Estimated Completion Value) × 100
-- DTI (Debt-to-Income Ratio) = Total Debt ÷ Annual Income (expressed as multiple, e.g., 2.74x)
-- Pre-calculated values provided: {lvr}, {dti}
+STEP 1: USE THE PRE-CALCULATED METRICS PROVIDED (DO NOT RECALCULATE)
+🚨 CRITICAL: You MUST use these exact values in Section 3 "Lender Policy Analysis & Eligibility Assessment":
+- LVR (Loan-to-Value Ratio): {lvr} ← USE THIS EXACT VALUE, DO NOT CALCULATE
+- DTI (Debt-to-Income Ratio): {dti} ← USE THIS EXACT VALUE, DO NOT CALCULATE
 - Loan Amount: {loan_amount}
 - Property Value (Estimated Completion): {property_value}
-- Note: {dti} is already calculated. Construction lenders typically require lower DTI due to higher risk.
+
+⚠️ DO NOT write "Based on LVR: 0.00%" or any other value besides {lvr}
+⚠️ In Section 3, you MUST use exactly: "LVR: {lvr}, DTI: {dti}"
+⚠️ Construction lenders typically require lower DTI due to higher risk during build phase.
 
 STEP 2: EXTRACT CONSTRUCTION-SPECIFIC LENDER POLICIES FROM RETRIEVED CONTEXT
 For EACH lender mentioned in the retrieved policy context, you MUST extract and verify:
@@ -1239,13 +1251,16 @@ You are an Australian lending specialist focused on cash-out refinance scenarios
 
 ⚠️ CRITICAL: MANDATORY VALIDATION STEPS FOR CASH-OUT REFINANCE (MUST FOLLOW STRICTLY):
 
-STEP 1: CALCULATE KEY METRICS
-- Post-Refinance LVR = ((Current Loan + Cash-Out Amount) ÷ Property Value) × 100
-- DTI (Debt-to-Income Ratio) = Total Debt ÷ Annual Income (expressed as multiple, e.g., 2.74x)
-- Pre-calculated values provided: {lvr}, {dti}
+STEP 1: USE THE PRE-CALCULATED METRICS PROVIDED (DO NOT RECALCULATE)
+🚨 CRITICAL: You MUST use these exact values in Section 3 "Lender Policy Analysis & Eligibility Assessment":
+- LVR (Loan-to-Value Ratio): {lvr} ← USE THIS EXACT VALUE, DO NOT CALCULATE
+- DTI (Debt-to-Income Ratio): {dti} ← USE THIS EXACT VALUE, DO NOT CALCULATE
 - Loan Amount: {loan_amount}
 - Property Value: {property_value}
-- Note: {dti} is already calculated. Cash-out lenders often have stricter DTI limits.
+
+⚠️ DO NOT write "Based on LVR: 0.00%" or any other value besides {lvr}
+⚠️ In Section 3, you MUST use exactly: "LVR: {lvr}, DTI: {dti}"
+⚠️ Cash-out lenders often have stricter DTI limits due to increased debt burden.
 
 STEP 2: EXTRACT CASH-OUT-SPECIFIC LENDER POLICIES FROM RETRIEVED CONTEXT
 For EACH lender mentioned in the retrieved policy context, you MUST extract and verify:
@@ -1503,14 +1518,17 @@ You are a commercial property lending analyst operating in the Australian market
 
 ⚠️ CRITICAL: MANDATORY VALIDATION STEPS FOR COMMERCIAL LENDING (MUST FOLLOW STRICTLY):
 
-STEP 1: CALCULATE KEY METRICS
-- LVR (Loan-to-Value Ratio) = (Loan Amount ÷ Property Value) × 100
-- DTI (Debt-to-Income Ratio) = Total Debt ÷ Annual Income (expressed as multiple, e.g., 2.74x)
-- DSCR (Debt Service Coverage Ratio) = Net Operating Income ÷ Annual Debt Service
-- Pre-calculated values provided: {lvr}, {dti}
+STEP 1: USE THE PRE-CALCULATED METRICS PROVIDED (DO NOT RECALCULATE)
+🚨 CRITICAL: You MUST use these exact values in Section 4 "Lender Policy Analysis & Eligibility Assessment":
+- LVR (Loan-to-Value Ratio): {lvr} ← USE THIS EXACT VALUE, DO NOT CALCULATE
+- DSCR (Debt Service Coverage Ratio): {dscr} ← PRIMARY METRIC FOR COMMERCIAL, USE THIS EXACT VALUE
+- DTI (Debt-to-Income Ratio): {dti} ← Less important for commercial but included
 - Loan Amount: {loan_amount}
 - Property Value: {property_value}
-- Note: {dti} is already calculated. Commercial lenders focus more on DSCR but DTI still matters.
+
+⚠️ DO NOT write "Based on LVR: 0.00%" or any other value besides {lvr}
+⚠️ In Section 4, you MUST output exactly: "Based on LVR: {lvr}, DSCR: {dscr}, Loan: {loan_amount}"
+⚠️ For commercial loans, DSCR is THE most important servicing metric. Lenders typically require DSCR ≥ 1.2x to 1.5x
 
 STEP 2: EXTRACT COMMERCIAL-SPECIFIC LENDER POLICIES FROM RETRIEVED CONTEXT
 For EACH lender mentioned in the retrieved policy context, you MUST extract and verify:
@@ -1714,7 +1732,8 @@ Generate a full HTML-formatted Credit Proposal for a Commercial Property Loan us
 - Loan Amount: {loan_amount}
 - Property Value: {property_value}
 - LVR (Loan-to-Value Ratio): {lvr}
-- DTI (Debt-to-Income Ratio): {dti}
+- DSCR (Debt Service Coverage Ratio): {dscr} ← PRIMARY METRIC FOR COMMERCIAL LOANS
+- DTI (Debt-to-Income Ratio): {dti} [Less relevant for commercial; DSCR is key]
 
 ### Applicants
 {applicants_block}
@@ -1733,7 +1752,7 @@ Generate a full HTML-formatted Credit Proposal for a Commercial Property Loan us
 Before section "5. Product Comparison Summary", you MUST add:
 
 <h2>4. Lender Policy Analysis & Eligibility Assessment</h2>
-<p><strong>Based on LVR: {lvr}, DTI: {dti}, Loan: {loan_amount}</strong></p>
+<p><strong>Based on LVR: {lvr}, DSCR: {dscr}, Loan: {loan_amount}</strong></p>
 
 <h3>✅ Eligible Lenders</h3>
 <ul>
@@ -1792,7 +1811,20 @@ def get_prompt_for_form(form_label: str) -> ChatPromptTemplate:
                        form_label, normalized_label, list(PROMPT_ROUTER.keys()))
         logging.info("Using DEFAULT_PROMPT as fallback.")
     else:
-        logging.info("✓ Selected SMSF_PURCHASE_PROMPT for form: %s", form_label)
+        # Dynamically determine which prompt was selected
+        prompt_name = "UNKNOWN_PROMPT"
+        for name, router_prompt in [
+            ("PURCHASE_PROMPT", PURCHASE_PROMPT),
+            ("REFINANCE_PROMPT", REFINANCE_PROMPT),
+            ("SMSF_PURCHASE_PROMPT", SMSF_PURCHASE_PROMPT),
+            ("CONSTRUCTION_PROMPT", CONSTRUCTION_PROMPT),
+            ("CASHOUT_PROMPT", CASHOUT_PROMPT),
+            ("COMMERCIAL_PROMPT", COMMERCIAL_PROMPT),
+        ]:
+            if prompt is router_prompt:
+                prompt_name = name
+                break
+        logging.info("✓ Selected %s for form: %s", prompt_name, form_label)
 
     return prompt
 
@@ -1878,14 +1910,16 @@ Output ONLY the search queries, one per line, no numbering or explanations:"""
     return all_queries[:10]  # Limit to 10 queries max
 
 
-def enhanced_retrieve_docs(queries: List[str], k_per_query: int = 4) -> List:
+def enhanced_retrieve_docs(queries: List[str], k_per_query: int = 4, domain_filter: Optional[str] = None) -> List:
     """
-    Multi-query retrieval with deduplication.
+    Multi-query retrieval with deduplication and domain filtering.
     Retrieves documents for multiple queries and deduplicates results.
 
     Args:
         queries: List of search queries
         k_per_query: Number of documents to retrieve per query
+        domain_filter: Optional domain filter ("residential", "commercial", "smsf", etc.)
+                      If provided, only retrieves documents with matching metadata.
 
     Returns:
         List of unique documents (up to 30 total)
@@ -1893,11 +1927,27 @@ def enhanced_retrieve_docs(queries: List[str], k_per_query: int = 4) -> List:
     all_docs = []
     seen_hashes = set()
 
-    logging.info(f"Enhanced retrieval with {len(queries)} queries, k={k_per_query} each")
+    logging.info(f"Enhanced retrieval with {len(queries)} queries, k={k_per_query} each, domain_filter={domain_filter}")
 
     for idx, query in enumerate(queries, 1):
         try:
-            retriever = vectorstore.as_retriever(search_kwargs={"k": k_per_query})
+            # Build search kwargs with optional metadata filtering
+            search_kwargs = {"k": k_per_query}
+
+            # Add Qdrant metadata filter if domain specified
+            if domain_filter:
+                from qdrant_client.models import Filter, FieldCondition, MatchValue
+                search_kwargs["filter"] = Filter(
+                    must=[
+                        FieldCondition(
+                            key="domain",
+                            match=MatchValue(value=domain_filter)
+                        )
+                    ]
+                )
+                logging.debug(f"Query {idx}: Applying domain filter: {domain_filter}")
+
+            retriever = vectorstore.as_retriever(search_kwargs=search_kwargs)
             docs = retriever.invoke(query)
 
             if not docs:

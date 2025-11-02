@@ -1497,6 +1497,25 @@ def get_form_templates():
     }
 
 
+def safe_float(value: Any) -> float:
+    """Safely convert a value to float, handling commas, spaces, None, and empty strings."""
+    if value is None or value == "" or value == []:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        # Remove commas, spaces, and dollar signs
+        cleaned = value.replace(",", "").replace(" ", "").replace("$", "").replace("AUD", "").strip()
+        if not cleaned:
+            return 0.0
+        try:
+            return float(cleaned)
+        except (ValueError, TypeError):
+            logging.warning("Could not convert '%s' to float, returning 0.0", value)
+            return 0.0
+    return 0.0
+
+
 def calculate_lvr(loan_amount: float, property_value: float) -> float:
     """Calculate Loan-to-Value Ratio (LVR) as a percentage."""
     if property_value <= 0:
@@ -1550,14 +1569,27 @@ def ask_structured(payload: LoanQuery):
         logging.info("  Query %d: %s", idx, query)
 
     # TWO-STAGE RAG: Enhanced multi-query retrieval with deduplication
-    logging.info("Stage 2: Retrieving documents using multi-query approach...")
+    # Determine domain filter based on form type
+    form_type_val = payload.form_type.value
+    domain_filter = None
+    if form_type_val == "commercial_property_loan":
+        domain_filter = "commercial"
+    elif form_type_val == "smsf_loan_purchase":
+        domain_filter = "smsf"
+    elif form_type_val == "construction_loan":
+        domain_filter = "construction"
+    else:
+        # Purchase, refinance, cash-out are all residential
+        domain_filter = "residential"
+
+    logging.info("Stage 2: Retrieving documents using multi-query approach (domain: %s)...", domain_filter)
     docs = []
     docs_text = ""
     try:
         if queries:
             if ai is None:
                 ai = _ai()
-            docs = ai.enhanced_retrieve_docs(queries, k_per_query=3)  # Reduced from 4 to 3 to save tokens
+            docs = ai.enhanced_retrieve_docs(queries, k_per_query=3, domain_filter=domain_filter)
             docs_text = format_docs(docs)
     except Exception as e:
         logging.exception("Document retrieval failed: %s", e)
@@ -1569,24 +1601,42 @@ def ask_structured(payload: LoanQuery):
     #
     # BUG FIX #5: Universal property value resolver
     # Different forms use different field names - check all possibilities in order of priority
-    property_value = float(
-        payload.form_data.get("estimated_completion_value") or  # Construction (highest priority)
-        payload.form_data.get("purchase_price") or  # Purchase
-        payload.form_data.get("estimated_property_value") or  # Refinance
-        payload.form_data.get("property_value") or  # Generic / SMSF
-        payload.form_data.get("security_property_value") or  # Commercial
-        0
-    )
 
-    # Get base loan amount from different form types
-    form_type_val = payload.form_type.value
-    loan_amount = float(
-        payload.form_data.get("loan_amount") or  # Purchase, SMSF
-        payload.form_data.get("current_loan_balance") or  # Refinance (base amount)
-        payload.form_data.get("construction_loan_amount") or  # Construction
-        payload.form_data.get("loan_amount_requested") or  # Commercial
-        0
-    )
+    # Get base loan amount and property value from different form types
+    # DETERMINISTIC: Based on form_type, not fragile OR chains
+    # (form_type_val already defined above for domain filtering)
+
+    # Determine property value field based on form type
+    if form_type_val == "construction_loan":
+        property_value = safe_float(payload.form_data.get("estimated_completion_value"))
+    elif form_type_val in ["purchase_application", "smsf_loan_purchase"]:
+        property_value = safe_float(payload.form_data.get("purchase_price"))
+    elif form_type_val == "refinance_application":
+        property_value = safe_float(payload.form_data.get("estimated_property_value"))
+    elif form_type_val == "cashout_refinance":
+        property_value = safe_float(payload.form_data.get("property_value"))
+    elif form_type_val == "commercial_property_loan":
+        property_value = safe_float(payload.form_data.get("purchase_price_or_refinance_amount"))
+    else:
+        # Fallback: try common field names
+        property_value = safe_float(
+            payload.form_data.get("property_value") or
+            payload.form_data.get("purchase_price") or
+            payload.form_data.get("estimated_property_value") or
+            0
+        )
+    logging.info("Resolved property_value for %s: $%.2f", form_type_val, property_value)
+
+    # Determine loan amount field based on form type
+    if form_type_val == "construction_loan":
+        loan_amount = safe_float(payload.form_data.get("loan_amount_requested"))
+    elif form_type_val in ["refinance_application", "cashout_refinance"]:
+        loan_amount = safe_float(payload.form_data.get("current_loan_balance"))
+    else:
+        # Purchase, SMSF, Commercial use "loan_amount"
+        loan_amount = safe_float(payload.form_data.get("loan_amount"))
+
+    logging.info("Resolved loan_amount for %s: $%.2f", form_type_val, loan_amount)
 
     # BUG FIX #3: Improved debt consolidation detection
     # Check multiple indicators, not just text in reason field
@@ -1605,20 +1655,20 @@ def ask_structured(payload: LoanQuery):
     # For refinance/cash-out with debt consolidation, calculate the TOTAL new loan amount
     if form_type_val in ["refinance", "cashout_refinance"]:
         # Get cash-out amount (BUG FIX #1)
-        cash_out_amount = float(payload.form_data.get("cash_out_amount") or
+        cash_out_amount = safe_float(payload.form_data.get("cash_out_amount") or
                                payload.form_data.get("cash_out_amount_requested") or
-                               payload.form_data.get("additional_funds_required") or 0)
+                               payload.form_data.get("additional_funds_required"))
 
         if is_consolidating or cash_out_amount > 0:
             # Total new loan = current balance + debts being consolidated + cash out
-            current_balance = float(payload.form_data.get("current_loan_balance") or 0)
+            current_balance = safe_float(payload.form_data.get("current_loan_balance"))
 
             # Get consolidated debt amounts
-            cc_to_consolidate = float(payload.form_data.get("credit_card_balance_to_consolidate") or
-                                     payload.form_data.get("credit_card_limit_total") or 0)
-            pl_to_consolidate = float(payload.form_data.get("personal_loans_balance") or 0)
-            car_to_consolidate = float(payload.form_data.get("car_loan_balance") or 0)
-            other_to_consolidate = float(payload.form_data.get("other_loan_balance") or 0)
+            cc_to_consolidate = safe_float(payload.form_data.get("credit_card_balance_to_consolidate") or
+                                     payload.form_data.get("credit_card_limit_total"))
+            pl_to_consolidate = safe_float(payload.form_data.get("personal_loans_balance"))
+            car_to_consolidate = safe_float(payload.form_data.get("car_loan_balance"))
+            other_to_consolidate = safe_float(payload.form_data.get("other_loan_balance"))
 
             total_consolidated = cc_to_consolidate + pl_to_consolidate + car_to_consolidate + other_to_consolidate
 
@@ -1630,27 +1680,30 @@ def ask_structured(payload: LoanQuery):
 
     # BUG FIX #4: Calculate total income from components if total_income_annual is missing or zero
     # Try different income field names across different forms
-    annual_income = float(
+    annual_income = safe_float(
         payload.form_data.get("total_income_annual") or
         payload.form_data.get("total_income") or
         payload.form_data.get("combined_income_annual") or
-        payload.form_data.get("annual_rental_income") or  # SMSF/Commercial
+        payload.form_data.get("annual_rental_income") or  # Commercial
+        payload.form_data.get("rental_income_potential") or  # SMSF
         payload.form_data.get("annual_business_revenue") or  # Commercial
-        payload.form_data.get("net_profit_before_tax") or  # Commercial
-        0
+        payload.form_data.get("net_profit_before_tax")  # Commercial
     )
 
     # BUG FIX #4: If total income is zero or missing, compute from components
     if annual_income == 0:
-        base_income = float(payload.form_data.get("base_income_annual") or
-                           payload.form_data.get("base_salary") or 0)
-        bonus_income = float(payload.form_data.get("bonus_income_annual") or
-                            payload.form_data.get("bonus") or 0)
-        self_employment_income = float(payload.form_data.get("self_employment_income_annual") or
-                                      payload.form_data.get("self_employment_income") or 0)
-        other_income = float(payload.form_data.get("other_income_annual") or
-                            payload.form_data.get("other_income") or 0)
-        rental_income = float(payload.form_data.get("rental_income_annual") or 0)
+        base_income = safe_float(payload.form_data.get("base_income_annual") or
+                           payload.form_data.get("base_salary"))
+        bonus_income = safe_float(payload.form_data.get("bonus_income_annual") or
+                            payload.form_data.get("bonus"))
+        self_employment_income = safe_float(payload.form_data.get("self_employment_income_annual") or
+                                      payload.form_data.get("self_employment_income"))
+        other_income = safe_float(payload.form_data.get("other_income_annual") or
+                            payload.form_data.get("other_income"))
+        rental_income = safe_float(
+            payload.form_data.get("rental_income_annual") or
+            payload.form_data.get("rental_income_potential")  # SMSF
+        )
 
         annual_income = base_income + bonus_income + self_employment_income + other_income + rental_income
 
@@ -1663,46 +1716,68 @@ def ask_structured(payload: LoanQuery):
 
     # BUG FIX #2: Use actual credit card balances, not limits
     # Get credit card balance (not limit) for DTI calculation
-    credit_card_balance = float(
+    credit_card_balance = safe_float(
         payload.form_data.get("credit_card_balance_total") or
-        payload.form_data.get("credit_card_balance") or 0
+        payload.form_data.get("credit_card_balance")
     )
 
-    # If only limit is available and no balance specified, estimate monthly repayment (3% of limit)
-    # This is more accurate than using the full limit as debt
+    # If only limit is available and no balance specified, use the full limit for DTI.
     if credit_card_balance == 0:
-        credit_card_limit = float(
+        credit_card_limit = safe_float(
             payload.form_data.get("credit_card_limit_total") or
-            payload.form_data.get("credit_card_limit") or 0
+            payload.form_data.get("credit_card_limit")
         )
         if credit_card_limit > 0:
-            # Estimate monthly repayment: 3% of limit, annualized for DTI
-            credit_card_balance = credit_card_limit * 0.03 * 12
-            logging.info("Credit card: Using estimated annual repayment $%.2f (3%% of $%.2f limit * 12)",
-                        credit_card_balance, credit_card_limit)
+            # For DTI, the full limit is considered the debt, not a repayment estimate.
+            credit_card_balance = credit_card_limit
+            logging.info("Credit card: No balance provided. Using full limit $%.2f as debt for DTI calculation.",
+                        credit_card_balance)
 
-    personal_loan_debt = float(payload.form_data.get("personal_loans_balance") or 0)
-    car_loan_debt = float(payload.form_data.get("car_loan_balance") or 0)
-    other_loan_debt = float(payload.form_data.get("other_loan_balance") or 0)
-    help_debt = float(payload.form_data.get("help_debt_balance") or 0)
+    personal_loan_debt = safe_float(payload.form_data.get("personal_loans_balance"))
+    car_loan_debt = safe_float(payload.form_data.get("car_loan_balance"))
+    other_loan_debt = safe_float(payload.form_data.get("other_loan_balance"))
+    help_debt = safe_float(payload.form_data.get("help_debt_balance"))
 
-    # Check if this is a refinance with debt consolidation
+    # Calculate total debt based on scenario
     is_refinance = form_type_val in ["refinance", "cashout_refinance"]
+    is_new_purchase = form_type_val in ["purchase_application", "smsf_loan_purchase", "construction_loan"]
+    is_commercial = form_type_val == "commercial_property_loan"
 
     if is_refinance and is_consolidating:
-        # loan_amount already calculated above to include consolidated debts
+        # Refinance WITH consolidation: loan_amount already includes consolidated debts
         # Only add debts NOT being consolidated (like HECS)
         total_debt = loan_amount + help_debt
         logging.info("REFINANCE WITH CONSOLIDATION: Total debt = $%.2f (loan includes consolidated debts)",
                     total_debt)
-    else:
-        # Not consolidating, or not a refinance - add all existing debts
+    elif is_new_purchase or is_commercial:
+        # New purchase/commercial: loan IS the primary debt, but add OTHER existing debts
+        # (applicant may have credit cards, personal loans, etc. that affect servicing)
         total_debt = loan_amount + credit_card_balance + personal_loan_debt + car_loan_debt + other_loan_debt + help_debt
-        logging.info("%s: Total debt = $%.2f",
-                    "REFINANCE WITHOUT CONSOLIDATION" if is_refinance else f"NON-REFINANCE ({form_type_val})",
-                    total_debt)
+        logging.info("%s: Total debt = $%.2f (New loan: $%.2f + Existing debts: $%.2f)",
+                    form_type_val.upper(), total_debt, loan_amount,
+                    credit_card_balance + personal_loan_debt + car_loan_debt + other_loan_debt + help_debt)
+    else:
+        # Refinance WITHOUT consolidation: add current loan + all other debts
+        total_debt = loan_amount + credit_card_balance + personal_loan_debt + car_loan_debt + other_loan_debt + help_debt
+        logging.info("REFINANCE WITHOUT CONSOLIDATION: Total debt = $%.2f", total_debt)
 
     dti = calculate_dti(total_debt, annual_income) if annual_income > 0 else 0.0
+
+    # Calculate DSCR for commercial loans
+    dscr = 0.0
+    if form_type_val in ["commercial_property_loan", "commercial"]:
+        # DSCR = Net Operating Income / Annual Debt Service
+        annual_rental = safe_float(payload.form_data.get("annual_rental_income"))
+        vacancy_pct = safe_float(payload.form_data.get("vacancy_allowance_percent"))
+        annual_repayments = safe_float(payload.form_data.get("annual_loan_repayments"))
+
+        # Net Operating Income = Rental Income × (1 - Vacancy%)
+        net_operating_income = annual_rental * (1 - vacancy_pct / 100)
+
+        if annual_repayments > 0:
+            dscr = round(net_operating_income / annual_repayments, 2)
+            logging.info("COMMERCIAL DSCR: %.2fx (NOI: $%.2f = $%.2f rental × %.2f%% occupancy, Debt Service: $%.2f)",
+                        dscr, net_operating_income, annual_rental, (100 - vacancy_pct), annual_repayments)
 
     logging.info("CORRECTED METRICS - LVR: %.2f%%, DTI: %.2fx (Annual Income: $%.2f, Total Debt: $%.2f)",
                  lvr, dti, annual_income, total_debt)
@@ -1715,7 +1790,8 @@ def ask_structured(payload: LoanQuery):
         "additional_notes": payload.additional_notes or "None.",
         "policy_context": docs_text or "No relevant documents retrieved.",
         "lvr": f"{lvr:.2f}%",
-        "dti": f"{dti:.2f}x",  # DTI is a multiple, not a percentage
+        "dti": f"{dti:.2f}x" if dti > 0 else "N/A",  # DTI is a multiple, not a percentage
+        "dscr": f"{dscr:.2f}x" if dscr > 0 else "N/A",  # Add DSCR for commercial loans
         "loan_amount": f"${loan_amount:,.2f}",
         "property_value": f"${property_value:,.2f}",
     }
@@ -1731,7 +1807,8 @@ def ask_structured(payload: LoanQuery):
         logging.exception("run_credit_chain failed: %s", e)
         raise HTTPException(status_code=503, detail="AI service temporarily unavailable. Please retry.")
     normalised_html = unicodedata.normalize("NFKC", answer_html)
-    normalised_html = normalised_html.replace("", "-").replace("–", "-").replace("—", "-").replace("•", "-")
+    # Normalize unicode dashes/bullets to standard ASCII (DO NOT replace spaces!)
+    normalised_html = normalised_html.replace("–", "-").replace("—", "-").replace("•", "-")
     safe_html = bleach.clean(
         normalised_html,
         tags=[

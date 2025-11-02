@@ -23,8 +23,3 @@ bleach==6.2.0
 
 # Production Server
 gunicorn==21.2.0
-
-# Development Dependencies (optional)
-# python-multipart==0.0.6  # Required if handling file uploads
-# pytest==8.2.0  # For testing
-# pytest-cov==4.2.0  # For test coverage
