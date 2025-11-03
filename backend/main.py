@@ -1571,18 +1571,22 @@ def ask_structured(payload: LoanQuery):
     # TWO-STAGE RAG: Enhanced multi-query retrieval with deduplication
     # Determine domain filter based on form type
     form_type_val = payload.form_type.value
-    domain_filter = None
-    if form_type_val == "commercial_property_loan":
-        domain_filter = "commercial"
-    elif form_type_val == "smsf_loan_purchase":
-        domain_filter = "smsf"
-    elif form_type_val == "construction_loan":
-        domain_filter = "construction"
-    else:
-        # Purchase, refinance, cash-out are all residential
-        domain_filter = "residential"
 
-    logging.info("Stage 2: Retrieving documents using multi-query approach (domain: %s)...", domain_filter)
+    # TEMP FIX: Disable domain filtering until documents have metadata
+    # TODO: Re-enable after running metadata update script
+    domain_filter = None
+
+    # if form_type_val == "commercial_property_loan":
+    #     domain_filter = "commercial"
+    # elif form_type_val == "smsf_loan_purchase":
+    #     domain_filter = "smsf"
+    # elif form_type_val == "construction_loan":
+    #     domain_filter = "construction"
+    # else:
+    #     # Purchase, refinance, cash-out are all residential
+    #     domain_filter = "residential"
+
+    logging.info("Stage 2: Retrieving documents using multi-query approach (domain filter: %s - DISABLED FOR TESTING)...", domain_filter or "None")
     docs = []
     docs_text = ""
     try:
